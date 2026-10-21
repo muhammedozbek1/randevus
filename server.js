@@ -31,6 +31,28 @@ const DEFAULT_PIN = process.env.DEFAULT_PIN || '1234';
 const APPOINTMENTS_KEY = 'beyaz_kuafor_randevular';
 
 /* ------------------------------------------------------------------
+   Montaj öneki
+   ------------------------------------------------------------------
+   Uygulama bir alt klasöre monte edildiğinde (örn. Hostinger Passenger:
+   public_html/nodeapp) istek yolları "/nodeapp/..." şeklinde gelir.
+   Bu durumda önek sunucu tarafında kaldırılır, istemci tarafında ise
+   store.js kendi konumundan otomatik olarak bulur (bkz. BB_API_BASE).
+   Normalde (domain kökünde) boştur — mevcut davranış değişmez.
+   ------------------------------------------------------------------ */
+const MOUNT = (() => {
+  const explicit = String(process.env.APP_BASE_PATH || '').trim().replace(/\/+$/, '');
+  if (explicit) return explicit.startsWith('/') ? explicit : '/' + explicit;
+  const docRoot = process.env.DOCUMENT_ROOT;
+  if (docRoot) {
+    try {
+      const rel = path.relative(path.resolve(docRoot), ROOT).split(path.sep).join('/');
+      if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) return '/' + rel;
+    } catch { /* yoksay */ }
+  }
+  return '';
+})();
+
+/* ------------------------------------------------------------------
    Veritabanı (JSON dosya — atomik yazım)
 ------------------------------------------------------------------ */
 function emptyDb() {
@@ -745,6 +767,12 @@ async function handleApi(req, res, url) {
 ------------------------------------------------------------------ */
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  /* Alt klasöre monte edildiyse öneki kaldır (örn. /nodeapp/api/... → /api/...) */
+  if (MOUNT && url.pathname.startsWith(MOUNT)) {
+    const rest = url.pathname.slice(MOUNT.length);
+    url.pathname = rest.startsWith('/') ? rest : (rest ? '/' + rest : '/');
+  }
 
   if (url.pathname.startsWith('/api/')) {
     handleApi(req, res, url).catch((err) => {

@@ -11,7 +11,27 @@
 (() => {
   'use strict';
 
-  const API = '/api';
+  /* ------------------------------------------------------------------
+     API kökü
+     ------------------------------------------------------------------
+     Uygulama bir alt klasöre monte edilmişse (örn. Hostinger Passenger:
+     https://site.com/nodeapp/store.js) API adresleri de o öneki içermeli.
+     store.js'in kendi konumundan önek otomatik olarak bulunur; domain
+     kökünde çalışıyorsa sonuç "/api" olur (değişiklik yok).
+     ------------------------------------------------------------------ */
+  const API_BASE = (() => {
+    try {
+      const src = document.currentScript && document.currentScript.src;
+      if (src) {
+        const dir = new URL(src).pathname.replace(/\/[^/]*$/, '');
+        if (dir && dir !== '/') return dir + '/api';
+      }
+    } catch { /* yoksay */ }
+    return '/api';
+  })();
+  window.BB_API_BASE = API_BASE;
+
+  const API = API_BASE;
   const SYNC_INTERVAL = 10000;   // dış değişiklik çekme aralığı (ms)
   const PUSH_DEBOUNCE = 300;     // yazma gecikmesi (ms)
 

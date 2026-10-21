@@ -20,7 +20,7 @@
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(opts.body);
     }
-    const res = await fetch('/api' + path, opts);
+    const res = await fetch((window.BB_API_BASE || '/api') + path, opts);
     let data = null;
     try { data = await res.json(); } catch { /* boş gövde */ }
     return { status: res.status, ok: res.ok, data };

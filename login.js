@@ -37,7 +37,7 @@
   ------------------------------------------------------------------ */
   async function loadSites() {
     try {
-      const res = await fetch('/api/sites', { credentials: 'same-origin' });
+      const res = await fetch((window.BB_API_BASE || '/api') + '/sites', { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         sites = data.sites || [];
