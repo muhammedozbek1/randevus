@@ -507,12 +507,16 @@ async function handleApi(req, res, url) {
       if (sess.site.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
         return sendJson(res, 409, { error: 'Bu kullanıcı adı zaten kullanılıyor.' });
       }
+      const role = String(body.role || 'usta');
+      if (!['owner', 'usta'].includes(role)) {
+        return sendJson(res, 400, { error: 'Geçersiz rol. "owner" veya "usta" olmalı.' });
+      }
       const user = {
         id: uid('U'),
         username,
         passHash: hashPassword(password),
         name: String(body.name || username).slice(0, 60),
-        role: 'user',
+        role,
         createdAt: new Date().toISOString()
       };
       sess.site.users.push(user);

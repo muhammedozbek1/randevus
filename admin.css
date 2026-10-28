@@ -180,6 +180,14 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
   font-size: 12px; font-weight: 800; text-transform: uppercase;
 }
 .adm-user__name { font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.adm-user__role {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); background: var(--surface-3);
+  border: 1px solid var(--border-2); border-radius: 999px;
+  padding: 2px 8px; white-space: nowrap;
+}
+.adm-user__role.role-owner { color: var(--gold-deep); border-color: rgba(177,137,43,.35); background: var(--gold-soft); }
+.adm-user__role.role-usta { color: #2563eb; border-color: rgba(37,99,235,.35); background: rgba(37,99,235,.08); }
 
 /* ---------- Kullanıcı satırı ---------- */
 .adm-svcrow__tag {
@@ -993,6 +1001,7 @@ input.adm-svcrow__name:focus {
 @media (max-width: 1024px) {
   :root { --side-w: 76px; }
   .adm-side__brandtext, .adm-navitem span:not(.adm-navitem__badge), .adm-side__link, .adm-side__ver, .adm-nav__label, .adm-side__stat span { display: none; }
+  .adm-side { display: none; width: 0; }
   .adm-side__brand { justify-content: center; padding-left: 0; padding-right: 0; }
   .adm-navitem { justify-content: center; padding: 12px; }
   .adm-navitem__badge { position: absolute; top: 4px; right: 6px; margin: 0; }

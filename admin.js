@@ -118,6 +118,12 @@
   const PIN_GUARDED_VIEWS = ['finance', 'kasa'];
 
   function switchView(name, skipHash) {
+    /* Usta rolü sadece Yeni İşlem (pos) sayfasına erişebilir */
+    if (userRole === 'usta' && name !== 'pos') {
+      toast('Bu sayfaya erişim izniniz yok.', 'err');
+      return;
+    }
+
     const guarded = PIN_GUARDED_VIEWS.includes(name);
 
     if (guarded) {
@@ -164,10 +170,19 @@
   function renderStats() {
     const jobs = getJobs();
     const today = todayISO();
-    const todayJobs = jobs.filter((j) => j.date === today);
 
-    $('#sideToday').textContent = todayJobs.length;
-    $('#navJobCount').textContent = jobs.length;
+    if (userRole === 'usta') {
+      const myName = S.user.name || S.user.username;
+      const myJobs = jobs.filter((j) => j.master === myName);
+      const todayJobs = myJobs.filter((j) => j.date === today);
+      $('#sideToday').textContent = todayJobs.length;
+      $('#navJobCount').textContent = myJobs.length;
+      renderMyStats();
+    } else {
+      const todayJobs = jobs.filter((j) => j.date === today);
+      $('#sideToday').textContent = todayJobs.length;
+      $('#navJobCount').textContent = jobs.length;
+    }
     renderFinance();
   }
 
@@ -306,7 +321,7 @@
       div.innerHTML = `<span>${escapeHtml(name)}</span><span>${money(svcPrice(name))}</span>`;
       container.appendChild(div);
     });
-    if (state.master) {
+    if (state.master && userRole !== 'usta') {
       const div = document.createElement('div');
       div.className = 'adm-summarylist__row adm-summarylist__row--master';
       div.innerHTML = `<span>Usta</span><span>${escapeHtml(state.master)}</span>`;
@@ -347,12 +362,17 @@
   }
 
   function renderDoneList() {
-    const jobs = todayJobs();
+    const allJobs = todayJobs();
     const box = $('#doneList');
-    $('#doneCount').textContent = jobs.length;
-    $('#doneDayCount').textContent = jobs.length;
 
-    if (!jobs.length) {
+    const displayJobs = userRole === 'usta'
+      ? allJobs.filter((j) => j.master === (S.user.name || S.user.username))
+      : allJobs;
+
+    $('#doneCount').textContent = displayJobs.length;
+    $('#doneDayCount').textContent = displayJobs.length;
+
+    if (!displayJobs.length) {
       box.innerHTML = `
         <div class="adm-donelist__empty">
           <svg><use href="#i-receipt"/></svg>
@@ -363,7 +383,7 @@
     }
 
     box.innerHTML = '';
-    jobs.forEach((j) => {
+    displayJobs.forEach((j) => {
       const row = document.createElement('div');
       row.className = 'adm-done';
       row.innerHTML = `
@@ -430,7 +450,10 @@
 
   $('#completeBtn').addEventListener('click', () => {
     if (!state.selected.length) { toast('Hizmet seçin.', 'err'); return; }
-    if (!state.master) { toast('Usta seçin.', 'err'); return; }
+
+    /* Usta rolünde master zaten otomatik atanmıştır; owner için seçim zorunlu */
+    if (userRole !== 'usta' && !state.master) { toast('Usta seçin.', 'err'); return; }
+    const masterName = userRole === 'usta' ? (S.user.name || S.user.username) : state.master;
 
     /* Kasa kapanışı yapılmış günlerde yeni işlem alınamaz (admin-pay modülü) */
     const guard = (window.BerberPay && window.BerberPay.checkTransactionAllowed)
@@ -441,7 +464,7 @@
     /* Pay oranı + ödeme yöntemi snapshot'ı (admin-pay modülü) */
     const extra = (window.BerberPay && window.BerberPay.buildJobFields)
       ? window.BerberPay.buildJobFields({
-        master: state.master,
+        master: masterName,
         services: [...state.selected],
         amount: totalAmount()
       })
@@ -451,10 +474,11 @@
       id: 'J' + Date.now() + Math.floor(Math.random() * 1000),
       date: todayISO(),
       time: nowTime(),
-      master: state.master,
+      master: masterName,
       services: [...state.selected],
       service: state.selected.join(' + '),
       amount: totalAmount(),
+      paymentMethod: $('#payMethod') ? ($('#payMethod').querySelector('.adm-segment__btn.is-active')?.dataset.method || 'cash') : 'cash',
       createdAt: new Date().toISOString(),
       ...extra
     };
@@ -1669,6 +1693,17 @@
      Köprü — admin-pay modülünün kullandığı mevcut yardımcılar.
      Yeni modül mevcut fonksiyonları değiştirmez, yalnızca okur.
   ------------------------------------------------------------------ */
+  function renderMyStats() {
+    if (userRole !== 'usta') return;
+    const myName = S.user.name || S.user.username;
+    const jobs = getJobs().filter((j) => j.master === myName);
+    const total = jobs.reduce((a, j) => a + (j.amount || 0), 0);
+    const el1 = $('#myTotalJobs');
+    const el2 = $('#myTotalCiro');
+    if (el1) el1.textContent = jobs.length;
+    if (el2) el2.textContent = money(total);
+  }
+
   window.BerberPanel = {
     getJobs, saveJobs, getSvcs, getMasters,
     getClosedDays, saveClosedDays,
@@ -1683,6 +1718,87 @@
      Sunucuya ulaşılamıyorsa panel çevrimdışı (yalnızca bu tarayıcı) çalışır. */
   const session = await S.requireAuth();
   if (!session) return;
+
+  /* ==================================================================
+     Rol tabanlı UI kısıtlamaları
+     - usta: sadece Yeni İşlem (pos) görünür; hizmet, fiyat, Onayla
+     - owner: tam erişim (mevcut davranış)
+   ================================================================== */
+  const userRole = S.user && S.user.role;
+
+  function applyRoleUI() {
+    if (!userRole) return;
+    document.body.classList.add(`adm-role-${userRole}`);
+
+    if (userRole === 'usta') {
+      /* Sadece Yeni İşlem (pos) nav item'ı görünür; diğerleri gizli */
+      $$('.adm-navitem').forEach((btn) => {
+        if (btn.dataset.view !== 'pos') btn.style.display = 'none';
+      });
+      /* Sayfa başlığını ve alt başlığı usta için düzenle */
+      $('#admPageTitle').textContent = 'Yeni İşlem';
+      $('#admPageSub').textContent = 'Hizmeti seçin, fiyatı onaylayın ve işlemi kaydedin.';
+
+      /* Usta kendi adıyla işlem yapar — usta seçimini gizle, otomatik ata */
+      state.master = S.user.name || S.user.username;
+      /* Sadece Usta kartını gizle; Ücret kartı (fiyat +/− butonları) görünür kalsın */
+      const masterCard = document.querySelector('.adm-pos__col:nth-child(2) .adm-card:first-child');
+      if (masterCard) masterCard.style.display = 'none';
+
+      /* Ekstra hizmet, tutar düzeltme, ödeme yöntemi, gün sonu — gizli */
+      const hideSel = [
+        '#extraPickBtn', '#extraChips', '#amtPresets',
+        '#dayEndBtn', '#addSvcQuick', '#addMasterQuick'
+      ];
+      hideSel.forEach((sel) => {
+        $$(sel).forEach((el) => { el.style.display = 'none'; });
+      });
+
+      /* Buton metni: "İşlemi Tamamla" → "Onayla" */
+      const completeBtn = $('#completeBtn');
+      if (completeBtn) {
+        completeBtn.innerHTML = '<svg><use href="#i-check"/></svg> Onayla';
+      }
+
+      /* Özette "Usta" satırını gizle — zaten otomatik atanır */
+      /* renderSummary içinde usta satırını bastıralım */
+
+      /* Kendi Özetim kartı (toplam işlem + toplam ciro) */
+      const rightCol = document.querySelector('.adm-pos__col:last-child');
+      if (rightCol && !$('#myStatsCard')) {
+        const card = document.createElement('section');
+        card.className = 'adm-card';
+        card.id = 'myStatsCard';
+        card.innerHTML = `
+          <header class="adm-card__head">
+            <div>
+              <h2>Kendi Özetim</h2>
+              <span class="adm-card__sub">Toplam işlem ve ciro (sizin)</span>
+            </div>
+          </header>
+          <div class="adm-card__body adm-card__body--col">
+            <div class="adm-kpis" style="grid-template-columns: 1fr 1fr;">
+              <div class="adm-kpi">
+                <div class="adm-kpi__body">
+                  <span class="adm-kpi__label">Toplam İşlem</span>
+                  <strong class="adm-kpi__value" id="myTotalJobs">0</strong>
+                </div>
+              </div>
+              <div class="adm-kpi">
+                <div class="adm-kpi__body">
+                  <span class="adm-kpi__label">Toplam Ciro</span>
+                  <strong class="adm-kpi__value" id="myTotalCiro">0 ₺</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        rightCol.appendChild(card);
+      }
+    }
+  }
+
+  applyRoleUI();
 
   const siteInfo = S.site;
   if (siteInfo && siteInfo.name) {

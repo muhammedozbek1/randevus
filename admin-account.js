@@ -39,8 +39,14 @@
     if (!u) return;
     const nameEl = $('#admUserName');
     const initialEl = $('#admUserInitial');
+    const roleEl = $('#admUserRole');
     if (nameEl) nameEl.textContent = u.name || u.username;
     if (initialEl) initialEl.textContent = (u.name || u.username || '?').trim().charAt(0).toUpperCase();
+    if (roleEl) {
+      const roleLabel = u.role === 'owner' ? 'Dükkan Sahibi' : (u.role === 'usta' ? 'Usta' : u.role);
+      roleEl.textContent = roleLabel;
+      roleEl.className = `adm-user__role role-${u.role || 'user'}`;
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -77,7 +83,7 @@
       const isMe = store.user && u.username === store.user.username;
       row.innerHTML = `
         <span class="adm-svcrow__name" style="font-weight:600;">${escape(u.username)}</span>
-        <span class="adm-svcrow__tag">${escape(u.role === 'owner' ? 'Sahip' : 'Kullanıcı')}</span>
+        <span class="adm-svcrow__tag">${escape(u.role === 'owner' ? 'Dükkan Sahibi' : u.role === 'usta' ? 'Usta' : u.role)}</span>
         ${isMe ? '' : `<button type="button" class="adm-del" data-user="${escape(u.username)}" title="Sil"><svg><use href="#i-trash"/></svg></button>`}`;
       list.appendChild(row);
     });
@@ -98,8 +104,9 @@
     addUserBtn.addEventListener('click', async () => {
       const username = $('#newUserName').value.trim();
       const password = $('#newUserPass').value;
+      const role = $('#newUserRole').value;
       if (!username || !password) { toast('Kullanıcı adı ve şifre gerekli', 'err'); return; }
-      const res = await api('/users', { method: 'POST', body: { username, password } });
+      const res = await api('/users', { method: 'POST', body: { username, password, role } });
       if (res.ok) {
         toast('Kullanıcı eklendi');
         $('#newUserName').value = '';

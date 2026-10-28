@@ -126,6 +126,7 @@
         <div class="adm-user">
           <span class="adm-user__avatar" id="admUserInitial">–</span>
           <span class="adm-user__name" id="admUserName">—</span>
+          <span class="adm-user__role" id="admUserRole">—</span>
         </div>
         <div class="adm-clock">
           <svg class="adm-navitem__icon"><use href="#i-clock"/></svg>
@@ -961,6 +962,10 @@
               <div class="adm-addrow">
                 <input type="text" id="newUserName" placeholder="Kullanıcı adı" />
                 <input type="password" id="newUserPass" placeholder="Şifre" />
+                <select id="newUserRole" class="adm-select" style="width:140px;">
+                  <option value="usta">Usta</option>
+                  <option value="owner">Dükkan Sahibi</option>
+                </select>
                 <button type="button" class="adm-btn adm-btn--primary adm-btn--sm" id="addUserBtn">
                   <svg><use href="#i-plus"/></svg> Ekle
                 </button>
