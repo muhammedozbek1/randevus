@@ -1,0 +1,683 @@
+/* ==========================================================================
+   Yönetici (dükkan sahibi) — mobil görünüm
+   Yalnızca body.adm-role-owner + dar ekran. Usta ve masaüstü etkilenmez.
+   ========================================================================== */
+
+:root {
+  --adm-bottom-h: 64px;
+}
+
+/* Masaüstünde gizli; yalnızca yönetici + dar ekranda açılır */
+.adm-mobilesnap,
+.adm-bottomnav,
+.adm-more {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body.adm-role-owner {
+    --adm-bottom-h: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.adm-role-owner .adm-shell {
+    padding-bottom: 0;
+  }
+
+  body.adm-role-owner .adm-side {
+    display: none !important;
+    width: 0 !important;
+  }
+
+  body.adm-role-owner .adm-pagebar {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  body.adm-role-owner .adm-pagebar__title h1 {
+    font-size: 20px;
+  }
+
+  body.adm-role-owner .adm-pagebar__title p,
+  body.adm-role-owner .adm-clock,
+  body.adm-role-owner .adm-user__role {
+    display: none !important;
+  }
+
+  body.adm-role-owner .adm-user {
+    padding: 4px 10px 4px 4px;
+  }
+
+  body.adm-role-owner .adm-content {
+    padding: 12px 12px calc(var(--adm-bottom-h) + 16px);
+  }
+
+  /* ---------- Özet şeridi (Yeni İşlem) ---------- */
+  body.adm-role-owner .adm-mobilesnap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  body.adm-role-owner .adm-mobilesnap__card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 12px 11px;
+    min-height: 72px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  body.adm-role-owner .adm-mobilesnap__card span {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  body.adm-role-owner .adm-mobilesnap__card strong {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+
+  body.adm-role-owner .adm-mobilesnap__card em {
+    display: block;
+    margin-top: 2px;
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  /* ---------- Alt navigasyon ---------- */
+  body.adm-role-owner .adm-bottomnav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    height: var(--adm-bottom-h);
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 24px -16px rgba(16,24,40,.35);
+  }
+
+  body.adm-role-owner .adm-tab {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    cursor: pointer;
+    position: relative;
+    padding: 6px 2px 8px;
+  }
+
+  body.adm-role-owner .adm-tab svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  body.adm-role-owner .adm-tab.is-active {
+    color: var(--gold-deep);
+  }
+
+  body.adm-role-owner .adm-tab.is-active svg {
+    color: var(--gold);
+  }
+
+  body.adm-role-owner .adm-tab__badge {
+    position: absolute;
+    top: 4px;
+    right: calc(50% - 22px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+
+  /* ---------- Menü sheet ---------- */
+  body.adm-role-owner .adm-more {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(20,22,26,.42);
+    padding: 12px 12px calc(var(--adm-bottom-h) + 8px);
+    align-items: flex-end;
+  }
+
+  body.adm-role-owner .adm-more.is-open {
+    display: flex;
+  }
+
+  body.adm-role-owner .adm-more__panel {
+    width: 100%;
+    max-height: min(78vh, 640px);
+    overflow: auto;
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 16px 14px 18px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  body.adm-role-owner .adm-more__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  body.adm-role-owner .adm-more__head h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  body.adm-role-owner .adm-more__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  body.adm-role-owner .adm-more__item {
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  body.adm-role-owner .adm-more__item svg {
+    width: 22px;
+    height: 22px;
+    color: var(--gold-deep);
+  }
+
+  body.adm-role-owner .adm-more__item.is-active {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+
+  body.adm-role-owner .adm-more__links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  body.adm-role-owner .adm-more__link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 0;
+    background: none;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+
+  body.adm-role-owner .adm-more__link svg,
+  body.adm-role-owner .adm-more__link img {
+    width: 18px;
+    height: 18px;
+  }
+
+  body.adm-role-owner .adm-more__link--danger {
+    color: var(--danger);
+  }
+
+  /* ---------- Kart / KPI / form ---------- */
+  body.adm-role-owner .adm-kpis,
+  body.adm-role-owner .adm-kpis--3,
+  body.adm-role-owner .adm-report__kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  body.adm-role-owner .adm-kpi {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  body.adm-role-owner .adm-kpi:hover {
+    transform: none;
+  }
+
+  body.adm-role-owner .adm-kpi__value {
+    font-size: 18px;
+  }
+
+  body.adm-role-owner .adm-card__head {
+    padding: 12px 14px;
+    align-items: flex-start;
+  }
+
+  body.adm-role-owner .adm-toolbar,
+  body.adm-role-owner .adm-filters,
+  body.adm-role-owner .adm-periodbar,
+  body.adm-role-owner .adm-addrow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.adm-role-owner .adm-quickfilters {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.adm-role-owner .adm-chipbtn,
+  body.adm-role-owner .adm-btn,
+  body.adm-role-owner .adm-iconbtn,
+  body.adm-role-owner .adm-input,
+  body.adm-role-owner .adm-select,
+  body.adm-role-owner .adm-master,
+  body.adm-role-owner .adm-stepbtn,
+  body.adm-role-owner .adm-preset,
+  body.adm-role-owner .adm-segment__btn {
+    min-height: 44px;
+  }
+
+  body.adm-role-owner .adm-iconbtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  body.adm-role-owner .adm-input {
+    height: 44px;
+    width: 100%;
+  }
+
+  body.adm-role-owner .adm-input input,
+  body.adm-role-owner .adm-field input,
+  body.adm-role-owner .adm-addrow input,
+  body.adm-role-owner .adm-select,
+  body.adm-role-owner .adm-svcrow input,
+  body.adm-role-owner .adm-raterow__input {
+    font-size: 16px;
+    width: 100%;
+  }
+
+  body.adm-role-owner .adm-svcrow input[type="number"],
+  body.adm-role-owner .adm-addrow input[type="number"],
+  body.adm-role-owner .adm-rate-input input {
+    width: 100%;
+  }
+
+  body.adm-role-owner .adm-svcrow,
+  body.adm-role-owner .adm-raterow,
+  body.adm-role-owner .adm-addrow {
+    flex-wrap: wrap;
+  }
+
+  body.adm-role-owner .adm-svcgrid {
+    grid-template-columns: 1fr 1fr;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  body.adm-role-owner .adm-svc {
+    min-height: 72px;
+    padding: 12px;
+  }
+
+  body.adm-role-owner .adm-mastergrid {
+    gap: 8px;
+  }
+
+  body.adm-role-owner .adm-master {
+    padding: 8px 14px 8px 8px;
+  }
+
+  body.adm-role-owner #completeBtn {
+    position: sticky;
+    bottom: calc(var(--adm-bottom-h) + 8px);
+    z-index: 6;
+  }
+
+  body.adm-role-owner .adm-done__del {
+    opacity: 1;
+    width: 44px;
+    height: 44px;
+  }
+
+  body.adm-role-owner .adm-del {
+    width: 44px;
+    height: 44px;
+  }
+
+  body.adm-role-owner .adm-amount__value {
+    font-size: 30px;
+  }
+
+  body.adm-role-owner .adm-chart {
+    height: 160px;
+    overflow-x: auto;
+  }
+
+  body.adm-role-owner .adm-toasts {
+    right: 12px;
+    left: 12px;
+    bottom: calc(var(--adm-bottom-h) + 12px);
+    align-items: stretch;
+  }
+
+  body.adm-role-owner .adm-toast {
+    max-width: none;
+  }
+
+  body.adm-role-owner .adm-modal {
+    padding: 12px 12px calc(var(--adm-bottom-h) + 8px);
+    align-items: flex-end;
+  }
+
+  body.adm-role-owner .adm-modalbox {
+    max-height: 86vh;
+    border-radius: 18px;
+  }
+
+  /* ---------- Tablolar → kart ---------- */
+  body.adm-role-owner .adm-tablewrap {
+    overflow: visible;
+  }
+
+  body.adm-role-owner .adm-table,
+  body.adm-role-owner .adm-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  body.adm-role-owner .adm-table thead {
+    display: none;
+  }
+
+  body.adm-role-owner .adm-table tr {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    position: relative;
+    width: auto;
+    margin: 0 12px 10px;
+    padding: 12px 14px;
+    padding-right: 96px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-xs);
+  }
+
+  body.adm-role-owner .adm-table tbody tr:hover {
+    background: var(--surface);
+  }
+
+  body.adm-role-owner .adm-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    max-width: none;
+    white-space: normal;
+    text-align: left;
+  }
+
+  body.adm-role-owner .adm-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1px;
+  }
+
+  body.adm-role-owner .adm-table td.ta-right,
+  body.adm-role-owner .adm-table td.ta-center {
+    text-align: left;
+  }
+
+  /* Tek işlem satırları (İş Geçmişi, Kasa Günlük İşlemleri, Gün Sonu Raporu) */
+  body.adm-role-owner #jobBody tr td[data-label="Ücret"],
+  body.adm-role-owner #cashJobsBody tr td[data-label="Tutar"],
+  body.adm-role-owner #dayEndBody tr td[data-label="Ücret"] {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    text-align: right;
+    font-size: 16px;
+    padding-right: 0;
+  }
+
+  body.adm-role-owner #jobBody tr td[data-label="Ücret"]::before,
+  body.adm-role-owner #cashJobsBody tr td[data-label="Tutar"]::before,
+  body.adm-role-owner #dayEndBody tr td[data-label="Ücret"]::before {
+    text-align: right;
+  }
+
+  /* Silme butonu (İş Geçmişi) */
+  body.adm-role-owner .adm-table td[data-label="İşlem"] {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: auto;
+  }
+
+  body.adm-role-owner .adm-table td[data-label="İşlem"]::before {
+    display: none;
+  }
+
+  /* Usta Hak Ediş Özeti Tablosu (#masterSummaryBody) - 2 sütunlu zengin kart */
+  body.adm-role-owner #masterSummaryBody tr {
+    padding-right: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  body.adm-role-owner #masterSummaryBody tr td[data-label="Usta"] {
+    grid-column: span 2;
+    padding-right: 90px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  body.adm-role-owner #masterSummaryBody tr td[data-label="Kalan"] {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    text-align: right;
+    font-size: 16px;
+  }
+
+  body.adm-role-owner #masterSummaryBody tr td[data-label="Kalan"]::before {
+    text-align: right;
+  }
+
+  /* Usta İşlem Detayları (#masterJobsBody) */
+  body.adm-role-owner #masterJobsBody tr {
+    padding-right: 14px;
+  }
+
+  body.adm-role-owner #masterJobsBody tr td[data-label="Tarih"] {
+    padding-right: 90px;
+  }
+
+  body.adm-role-owner #masterJobsBody tr td[data-label="Usta Payı"] {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    text-align: right;
+    font-size: 16px;
+    color: var(--gold-deep);
+  }
+
+  body.adm-role-owner #masterJobsBody tr td[data-label="Usta Payı"]::before {
+    text-align: right;
+  }
+
+  /* Oran Değişiklik Geçmişi (#rateHistoryBody) */
+  body.adm-role-owner #rateHistoryBody tr {
+    padding-right: 14px;
+  }
+
+  body.adm-role-owner #rateHistoryBody tr td[data-label="Yeni"] {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    text-align: right;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold-deep);
+  }
+
+  body.adm-role-owner #rateHistoryBody tr td[data-label="Yeni"]::before {
+    text-align: right;
+  }
+
+  /* Boş satırlar */
+  body.adm-role-owner .adm-table__emptyrow,
+  body.adm-role-owner .adm-table tr:has(td[colspan]) {
+    display: block !important;
+    text-align: center;
+    padding: 24px 14px !important;
+  }
+
+  body.adm-role-owner .adm-table tr:has(td[colspan]) td::before,
+  body.adm-role-owner .adm-table__emptyrow td::before {
+    display: none;
+  }
+
+  /* Kapatılan günler listesi */
+  body.adm-role-owner .adm-closing {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-radius: 12px;
+    margin: 0 12px 10px;
+    border: 1px solid var(--border);
+  }
+
+  body.adm-role-owner .adm-closing__date {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  body.adm-role-owner .adm-closing__nums {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Hizmet ve oran satırları */
+  body.adm-role-owner .adm-svcrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  body.adm-role-owner .adm-svcrow__name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  body.adm-role-owner .adm-svcrow input[type="number"] {
+    width: 80px !important;
+    flex-shrink: 0;
+  }
+
+  body.adm-role-owner .adm-raterow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  body.adm-role-owner .adm-raterow__name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  body.adm-role-owner .adm-raterow__input {
+    width: 70px !important;
+    flex-shrink: 0;
+  }
+
+  /* PIN kutusu */
+  body.adm-role-owner .adm-modal--pin {
+    padding: 16px;
+    align-items: center;
+  }
+
+  body.adm-role-owner .adm-modal--pin .adm-pinbox {
+    width: 100%;
+    max-width: 360px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  body.adm-role-owner .adm-kpis,
+  body.adm-role-owner .adm-kpis--3,
+  body.adm-role-owner .adm-report__kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}

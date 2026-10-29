@@ -203,7 +203,7 @@
             <small>${svcOverrides ? `${svcOverrides} hizmet istisnası` : 'Varsayılan oranı kullanıyor'}</small>
           </span>
           ${svcOverrides ? '<span class="adm-tag adm-tag--gold">Özel</span>' : '<span class="adm-tag adm-tag--gray">Varsayılan</span>'}
-          <input class="adm-raterow__input" type="number" min="0" max="100" step="1"
+          <input class="adm-raterow__input" type="number" min="0" max="100" step="1" inputmode="numeric"
                  value="${custom ? s.masterRates[m] : s.defaultRate}" aria-label="${api.escapeHtml(m)} pay oranı" />
           <span class="adm-raterow__unit">%</span>
           <button type="button" class="adm-iconbtn adm-masterrate-reset" title="Varsayılana dön" ${custom ? '' : 'disabled'}>
@@ -286,7 +286,7 @@
       hBody.innerHTML = '';
       const history = getRateHistory();
       if (!history.length) {
-        hBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--faint)">Henüz oran değişikliği yapılmadı</td></tr>';
+        hBody.innerHTML = '<tr class="adm-table__emptyrow"><td colspan="5" style="text-align:center;padding:24px;color:var(--faint)">Henüz oran değişikliği yapılmadı</td></tr>';
       }
       history.forEach((h) => {
         const scope = h.scope === 'default'
@@ -296,11 +296,11 @@
             : `${h.master} · ${h.service}`;
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="adm-nowrap"><strong>${api.escapeHtml(scope)}</strong></td>
-          <td class="adm-nowrap">${h.oldRate === null ? '—' : '%' + h.oldRate}</td>
-          <td class="adm-nowrap">${h.newRate === null ? '—' : '%' + h.newRate}</td>
-          <td class="adm-nowrap">${api.escapeHtml(h.by || '—')}</td>
-          <td class="adm-nowrap adm-muted">${formatTs(h.ts)}</td>`;
+          <td class="adm-nowrap" data-label="Kapsam"><strong>${api.escapeHtml(scope)}</strong></td>
+          <td class="adm-nowrap" data-label="Eski">${h.oldRate === null ? '—' : '%' + h.oldRate}</td>
+          <td class="adm-nowrap" data-label="Yeni">${h.newRate === null ? '—' : '%' + h.newRate}</td>
+          <td class="adm-nowrap" data-label="Değiştiren">${api.escapeHtml(h.by || '—')}</td>
+          <td class="adm-nowrap adm-muted" data-label="Tarih">${formatTs(h.ts)}</td>`;
         hBody.appendChild(tr);
       });
     }
@@ -360,7 +360,9 @@
 
   function masterAccounts(from, to) {
     const jobs = allJobs().filter((j) => inRange(j.date, from, to));
-    const masters = api.getMasters();
+    const activeMasters = api.getMasters();
+    const jobsMasters = jobs.map((j) => j.master).filter(Boolean);
+    const masters = Array.from(new Set([...activeMasters, ...jobsMasters]));
     const list = masters.map((m) => {
       const mj = jobs.filter((j) => j.master === m);
       const ciro = mj.reduce((a, j) => a + j.amountKurus, 0);
@@ -409,20 +411,20 @@
     if (tbody) {
       tbody.innerHTML = '';
       if (!accounts.length || !accounts.some((a) => a.count)) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--faint)">Bu dönemde kayıt bulunmuyor</td></tr>';
+        tbody.innerHTML = '<tr class="adm-table__emptyrow"><td colspan="7" style="text-align:center;padding:26px;color:var(--faint)">Bu dönemde kayıt bulunmuyor</td></tr>';
       }
       accounts.forEach((a) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>
+          <td data-label="Usta">
             <span class="adm-table__master"><i>${api.escapeHtml(api.initials(a.master))}</i>${api.escapeHtml(a.master)}</span>
           </td>
-          <td class="adm-nowrap">${a.count}</td>
-          <td class="ta-right adm-nowrap"><strong>${fmtKurus(a.ciro)}</strong></td>
-          <td class="ta-right adm-nowrap"><strong>${fmtKurus(a.share)}</strong></td>
-          <td class="ta-right adm-nowrap adm-muted">${fmtKurus(a.shop)}</td>
-          <td class="ta-right adm-nowrap">${fmtKurus(a.paid)}</td>
-          <td class="ta-right adm-nowrap">
+          <td class="adm-nowrap" data-label="İşlem Sayısı">${a.count}</td>
+          <td class="ta-right adm-nowrap" data-label="Ciro"><strong>${fmtKurus(a.ciro)}</strong></td>
+          <td class="ta-right adm-nowrap" data-label="Usta Payı"><strong>${fmtKurus(a.share)}</strong></td>
+          <td class="ta-right adm-nowrap adm-muted" data-label="Dükkan Payı">${fmtKurus(a.shop)}</td>
+          <td class="ta-right adm-nowrap" data-label="Ödenen">${fmtKurus(a.paid)}</td>
+          <td class="ta-right adm-nowrap" data-label="Kalan">
             <strong style="color:${a.balance > 0 ? 'var(--danger)' : a.balance < 0 ? 'var(--ok)' : 'var(--text)'}">${fmtKurus(a.balance)}</strong>
           </td>`;
         tbody.appendChild(tr);
@@ -470,16 +472,16 @@
     if (tbody) {
       tbody.innerHTML = '';
       if (!jobs.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--faint)">Bu dönemde işlem yok</td></tr>';
+        tbody.innerHTML = '<tr class="adm-table__emptyrow"><td colspan="5" style="text-align:center;padding:24px;color:var(--faint)">Bu dönemde işlem yok</td></tr>';
       }
       jobs.forEach((j) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="adm-nowrap adm-table__date">${api.fmtDate(j.date)}</td>
-          <td>${api.escapeHtml(j.services.join(' · '))}</td>
-          <td class="ta-right adm-nowrap"><strong>${fmtKurus(j.amountKurus)}</strong></td>
-          <td class="ta-right adm-nowrap"><span class="adm-tag adm-tag--gold">%${j.commissionRate}</span></td>
-          <td class="ta-right adm-nowrap"><strong>${fmtKurus(j.masterShareKurus)}</strong></td>`;
+          <td class="adm-nowrap adm-table__date" data-label="Tarih">${api.fmtDate(j.date)}</td>
+          <td class="adm-table__svc" data-label="Hizmetler">${api.escapeHtml(j.services.join(' · '))}</td>
+          <td class="ta-right adm-nowrap" data-label="Ücret"><strong>${fmtKurus(j.amountKurus)}</strong></td>
+          <td class="ta-right adm-nowrap" data-label="Oran"><span class="adm-tag adm-tag--gold">%${j.commissionRate}</span></td>
+          <td class="ta-right adm-nowrap" data-label="Usta Payı"><strong>${fmtKurus(j.masterShareKurus)}</strong></td>`;
         tbody.appendChild(tr);
       });
     }
@@ -651,7 +653,7 @@
     if (jobsBody) {
       jobsBody.innerHTML = '';
       if (!data.jobs.length) {
-        jobsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:26px;color:var(--faint)">Bu gün kayıtlı işlem yok</td></tr>';
+        jobsBody.innerHTML = '<tr class="adm-table__emptyrow"><td colspan="5" style="text-align:center;padding:26px;color:var(--faint)">Bu gün kayıtlı işlem yok</td></tr>';
       }
       data.jobs
         .slice()
@@ -660,11 +662,11 @@
           const tr = document.createElement('tr');
           const isCard = j.paymentMethod === 'card';
           tr.innerHTML = `
-            <td class="adm-table__time">${j.time || '—'}</td>
-            <td class="adm-nowrap">${api.escapeHtml(j.master || '—')}</td>
-            <td class="adm-table__svc">${api.escapeHtml(j.services.join(' · '))}</td>
-            <td><span class="adm-tag ${isCard ? 'adm-tag--gold' : 'adm-tag--ok'}">${isCard ? 'Kart' : 'Nakit'}</span></td>
-            <td class="ta-right adm-nowrap"><strong>${fmtKurus(j.amountKurus)}</strong></td>`;
+            <td class="adm-table__time" data-label="Saat">${j.time || '—'}</td>
+            <td class="adm-nowrap" data-label="Usta">${api.escapeHtml(j.master || '—')}</td>
+            <td class="adm-table__svc" data-label="Hizmetler">${api.escapeHtml(j.services.join(' · '))}</td>
+            <td data-label="Tahsilat"><span class="adm-tag ${isCard ? 'adm-tag--gold' : 'adm-tag--ok'}">${isCard ? 'Kart' : 'Nakit'}</span></td>
+            <td class="ta-right adm-nowrap" data-label="Tutar"><strong>${fmtKurus(j.amountKurus)}</strong></td>`;
           jobsBody.appendChild(tr);
         });
     }

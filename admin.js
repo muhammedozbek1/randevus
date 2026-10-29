@@ -41,11 +41,68 @@
   const getMasters = () => {
     try {
       const s = JSON.parse(safeGet(MASTERS_KEY));
-      if (Array.isArray(s) && s.length) return s;
+      if (Array.isArray(s) && s.length) {
+        const clean = s.filter((m) => typeof m === 'string' && m.trim() && !/^Usta \d+$/i.test(m.trim()));
+        if (clean.length) return clean;
+      }
     } catch {}
+    if (S.user && S.user.role === 'usta') {
+      const myName = S.user.name || S.user.username;
+      if (myName) return [myName];
+    }
     return [...DEFAULT_MASTERS];
   };
   const saveMasters = (m) => safeSet(MASTERS_KEY, JSON.stringify(m));
+
+  function addMaster(name) {
+    if (!name || typeof name !== 'string') return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    let current = getMasters().filter((m) => !/^Usta \d+$/i.test(m.trim()));
+    if (!current.includes(trimmed)) {
+      current.push(trimmed);
+      saveMasters(current);
+    }
+  }
+
+  function removeMaster(name) {
+    if (!name) return;
+    const current = getMasters();
+    const updated = current.filter((m) => m !== name);
+    saveMasters(updated);
+  }
+
+  function syncUstaUsers(users) {
+    if (!Array.isArray(users)) return;
+    const ustaNames = users
+      .filter((u) => u && u.role === 'usta')
+      .map((u) => (u.name || u.username || '').trim())
+      .filter(Boolean);
+    if (!ustaNames.length) return;
+
+    const current = getMasters();
+    const clean = current.filter((m) => !/^Usta \d+$/i.test(m.trim()));
+    let changed = false;
+
+    ustaNames.forEach((n) => {
+      if (!clean.includes(n)) {
+        clean.push(n);
+        changed = true;
+      }
+    });
+
+    if (current.some((m) => /^Usta \d+$/i.test(m.trim()))) changed = true;
+
+    if (changed) {
+      saveMasters(clean);
+      renderMasters();
+      renderSettings();
+      if (window.BerberPay) {
+        if (window.BerberPay.renderPaySettings) window.BerberPay.renderPaySettings();
+        if (window.BerberPay.renderMasterAccounts) window.BerberPay.renderMasterAccounts();
+      }
+    }
+  }
   const getClosedDays = () => { try { const s = JSON.parse(safeGet(CLOSED_KEY)); return Array.isArray(s) ? s : []; } catch { return []; } };
   const saveClosedDays = (d) => safeSet(CLOSED_KEY, JSON.stringify(d));
 
@@ -124,6 +181,8 @@
       return;
     }
 
+    closeOwnerMore(true);
+
     const guarded = PIN_GUARDED_VIEWS.includes(name);
 
     if (guarded) {
@@ -140,6 +199,7 @@
     currentView = name;
     $$('.adm-view').forEach((v) => v.classList.toggle('is-active', v.dataset.view === name));
     $$('.adm-navitem').forEach((b) => b.classList.toggle('is-active', b.dataset.view === name));
+    syncOwnerNav(name);
     const meta = VIEW_META[name] || VIEW_META.pos;
     $('#admPageTitle').textContent = meta.title;
     $('#admPageSub').textContent = meta.sub;
@@ -149,7 +209,9 @@
     if (name === 'settings') renderSettings();
     if (name === 'appointments' && window.BerberAppointments) window.BerberAppointments.render();
     if (name === 'kasa' && window.BerberPay) window.BerberPay.renderCash();
-    if (name === 'pos') { renderDoneList(); renderDayStatus(); }
+    if (name === 'masters' && window.BerberPay) window.BerberPay.renderMasterAccounts();
+    if (name === 'pay' && window.BerberPay) window.BerberPay.renderPaySettings();
+    if (name === 'pos') { renderMasters(); renderDoneList(); renderDayStatus(); renderOwnerSnap(); }
     if (!skipHash) {
       try { history.replaceState(null, '', '#' + name); } catch {}
     }
@@ -163,6 +225,74 @@
   $$('.adm-navitem').forEach((btn) => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
+
+  const MORE_VIEWS = ['finance', 'masters', 'pay', 'settings'];
+
+  function syncOwnerNav(name) {
+    const sheet = $('#ownerMoreMenu');
+    const moreOpen = !!(sheet && sheet.classList.contains('is-open'));
+    $$('.adm-tab').forEach((b) => {
+      if (b.dataset.view === 'more') {
+        b.classList.toggle('is-active', moreOpen || MORE_VIEWS.includes(name));
+      } else {
+        b.classList.toggle('is-active', !moreOpen && b.dataset.view === name);
+      }
+    });
+    $$('.adm-more__item').forEach((b) => b.classList.toggle('is-active', b.dataset.view === name));
+  }
+
+  function openOwnerMore() {
+    const sheet = $('#ownerMoreMenu');
+    if (!sheet) return;
+    sheet.hidden = false;
+    sheet.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    syncOwnerNav(currentView);
+  }
+
+  function closeOwnerMore(keepHash) {
+    const sheet = $('#ownerMoreMenu');
+    if (!sheet) return;
+    sheet.hidden = true;
+    sheet.classList.remove('is-open');
+    document.body.style.overflow = '';
+    if (!keepHash) syncOwnerNav(currentView);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeOwnerMore();
+  });
+
+  $$('.adm-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.view === 'more') {
+        const sheet = $('#ownerMoreMenu');
+        if (sheet && sheet.classList.contains('is-open')) closeOwnerMore();
+        else openOwnerMore();
+        return;
+      }
+      switchView(btn.dataset.view);
+    });
+  });
+
+  const moreMenu = $('#ownerMoreMenu');
+  if (moreMenu) {
+    moreMenu.addEventListener('click', (e) => {
+      if (e.target === moreMenu) closeOwnerMore();
+    });
+  }
+  const moreClose = $('#ownerMoreClose');
+  if (moreClose) moreClose.addEventListener('click', () => closeOwnerMore());
+  $$('.adm-more__item').forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+  const moreLogout = $('#ownerMoreLogout');
+  if (moreLogout) {
+    moreLogout.addEventListener('click', () => {
+      const side = $('#sideLogout');
+      if (side) side.click();
+    });
+  }
 
   /* ==================================================================
      KPI / İstatistik
@@ -182,8 +312,39 @@
       const todayJobs = jobs.filter((j) => j.date === today);
       $('#sideToday').textContent = todayJobs.length;
       $('#navJobCount').textContent = jobs.length;
+      $$('.js-badge-jobs').forEach((el) => {
+        el.textContent = jobs.length;
+        if (el.classList.contains('adm-tab__badge')) el.style.display = jobs.length ? '' : 'none';
+      });
+      renderOwnerSnap();
     }
     renderFinance();
+  }
+
+  function renderOwnerSnap() {
+    if (userRole === 'usta') return;
+    const ciroEl = $('#snapTodayCiro');
+    if (!ciroEl) return;
+    const today = todayISO();
+    const jobs = getJobs().filter((j) => j.date === today);
+    const ciro = sum(jobs);
+    const share = jobs.reduce((a, j) => {
+      if (Number.isInteger(j.masterShareKurus)) return a + j.masterShareKurus / 100;
+      const rate = Number.isInteger(j.commissionRate) ? j.commissionRate : 50;
+      return a + ((j.amount || 0) * rate / 100);
+    }, 0);
+    const cash = jobs.filter((j) => j.paymentMethod !== 'card').reduce((a, j) => a + (j.amount || 0), 0);
+    const card = jobs.filter((j) => j.paymentMethod === 'card').reduce((a, j) => a + (j.amount || 0), 0);
+    const closed = window.BerberPay && window.BerberPay.isDayClosed
+      ? window.BerberPay.isDayClosed(today)
+      : getClosedDays().includes(today);
+    ciroEl.textContent = money(ciro);
+    $('#snapJobsMeta').textContent = `${jobs.length} işlem`;
+    $('#snapMasterShare').textContent = money(share);
+    $('#snapCash').textContent = money(cash);
+    $('#snapCashMeta').textContent = `Kart ${money(card)}`;
+    $('#snapKasaState').textContent = closed ? 'Kapalı' : 'Açık';
+    $('#snapKasaMeta').textContent = closed ? 'Gün kapatıldı' : 'Gün henüz kapatılmadı';
   }
 
   /* ==================================================================
@@ -261,8 +422,14 @@
   ================================================================== */
   function renderMasters() {
     const container = $('#masterBoxes');
+    if (!container) return;
     container.innerHTML = '';
-    getMasters().forEach((m) => {
+    const masters = getMasters();
+    if (!masters.length) {
+      container.innerHTML = '<span class="adm-chips__empty" style="padding:10px;color:var(--text-muted);font-size:13px;">Kayıtlı usta yok</span>';
+      return;
+    }
+    masters.forEach((m) => {
       const box = document.createElement('button');
       box.type = 'button';
       box.className = 'adm-master';
@@ -567,12 +734,19 @@
   $('#qmSave').addEventListener('click', () => {
     const name = $('#qmName').value.trim();
     if (!name) { toast('Ad girin.', 'err'); return; }
-    const ms = getMasters();
-    ms.push(name);
+    let ms = getMasters().filter((m) => !/^Usta \d+$/i.test(m.trim()));
+    if (!ms.includes(name)) ms.push(name);
     saveMasters(ms);
     closeModal('addMasterModal');
+    $('#qmName').value = '';
     renderMasters();
-    toast('Usta eklendi');
+    renderAll();
+    renderSettings();
+    if (window.BerberPay) {
+      window.BerberPay.renderPaySettings();
+      window.BerberPay.renderMasterAccounts();
+    }
+    toast(`"${name}" eklendi.`);
   });
 
   /* ==================================================================
@@ -588,7 +762,7 @@
       row.className = 'adm-svcrow';
       row.innerHTML = `
         <input type="text" class="adm-svcrow__name" value="${escapeHtml(s.name)}" data-name="${idx}" aria-label="Hizmet adı" />
-        <input type="number" value="${s.price}" data-price="${idx}" min="0" aria-label="Fiyat" />
+        <input type="number" value="${s.price}" data-price="${idx}" min="0" inputmode="decimal" aria-label="Fiyat" />
         <span class="adm-svcrow__unit">₺</span>
         <button type="button" class="adm-del" data-del="${idx}" title="Sil"><svg><use href="#i-trash"/></svg></button>`;
       svcContainer.appendChild(row);
@@ -647,11 +821,15 @@
       btn.addEventListener('click', () => {
         const ms = getMasters();
         if (ms.length <= 1) { toast('En az bir usta kalmalı.', 'err'); return; }
-        ms.splice(btn.dataset.del, 1);
+        const removed = ms.splice(btn.dataset.del, 1)[0];
         saveMasters(ms);
         renderSettings();
         renderMasters();
-        toast('Usta silindi');
+        if (window.BerberPay) {
+          window.BerberPay.renderPaySettings();
+          window.BerberPay.renderMasterAccounts();
+        }
+        toast(`"${removed}" silindi`);
       });
     });
   }
@@ -674,13 +852,17 @@
   $('#addMasterBtn').addEventListener('click', () => {
     const name = $('#newMasterName').value.trim();
     if (!name) { toast('Usta adı girin.', 'err'); return; }
-    const ms = getMasters();
-    ms.push(name);
+    let ms = getMasters().filter((m) => !/^Usta \d+$/i.test(m.trim()));
+    if (!ms.includes(name)) ms.push(name);
     saveMasters(ms);
     $('#newMasterName').value = '';
     renderSettings();
     renderMasters();
-    toast('Usta eklendi');
+    if (window.BerberPay) {
+      window.BerberPay.renderPaySettings();
+      window.BerberPay.renderMasterAccounts();
+    }
+    toast(`"${name}" eklendi`);
   });
 
   $('#clearJobsBtn').addEventListener('click', () => {
@@ -779,12 +961,12 @@
     filteredJobs.forEach((j) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="adm-table__date">${fmtDate(j.date)}</td>
-        <td class="adm-table__time">${j.time || '—'}</td>
-        <td><span class="adm-table__master"><i>${escapeHtml(initials(j.master))}</i>${escapeHtml(j.master || '—')}</span></td>
-        <td class="adm-table__svc">${escapeHtml(servicesOf(j).join(' · '))}</td>
-        <td class="ta-right"><strong>${money(j.amount)}</strong></td>
-        <td class="ta-center"><button type="button" class="adm-del" title="Sil"><svg><use href="#i-trash"/></svg></button></td>`;
+        <td class="adm-table__date" data-label="Tarih">${fmtDate(j.date)}</td>
+        <td class="adm-table__time" data-label="Saat">${j.time || '—'}</td>
+        <td data-label="Usta"><span class="adm-table__master"><i>${escapeHtml(initials(j.master))}</i>${escapeHtml(j.master || '—')}</span></td>
+        <td class="adm-table__svc" data-label="Hizmetler">${escapeHtml(servicesOf(j).join(' · '))}</td>
+        <td class="ta-right" data-label="Ücret"><strong>${money(j.amount)}</strong></td>
+        <td class="ta-center" data-label="İşlem"><button type="button" class="adm-del" title="Sil"><svg><use href="#i-trash"/></svg></button></td>`;
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll('.adm-del').forEach((btn, i) => {
@@ -923,11 +1105,11 @@
           <thead><tr><th>Saat</th><th>Usta</th><th>Hizmetler</th><th class="ta-right">Ücret</th></tr></thead>
           <tbody>
             ${jobs.length ? jobs.map((j) => `<tr>
-              <td class="adm-table__time">${j.time || '—'}</td>
-              <td>${escapeHtml(j.master || '—')}</td>
-              <td class="adm-table__svc">${escapeHtml(servicesOf(j).join(' · '))}</td>
-              <td class="ta-right"><strong>${money(j.amount)}</strong></td>
-            </tr>`).join('') : `<tr><td colspan="4" style="text-align:center;padding:26px;color:var(--faint)">Bu tarihte kayıtlı işlem bulunmuyor.</td></tr>`}
+              <td class="adm-table__time" data-label="Saat">${j.time || '—'}</td>
+              <td data-label="Usta">${escapeHtml(j.master || '—')}</td>
+              <td class="adm-table__svc" data-label="Hizmetler">${escapeHtml(servicesOf(j).join(' · '))}</td>
+              <td class="ta-right" data-label="Ücret"><strong>${money(j.amount)}</strong></td>
+            </tr>`).join('') : `<tr class="adm-table__emptyrow"><td colspan="4" style="text-align:center;padding:26px;color:var(--faint)">Bu tarihte kayıtlı işlem bulunmuyor.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -1697,15 +1879,38 @@
     if (userRole !== 'usta') return;
     const myName = S.user.name || S.user.username;
     const jobs = getJobs().filter((j) => j.master === myName);
-    const total = jobs.reduce((a, j) => a + (j.amount || 0), 0);
-    const el1 = $('#myTotalJobs');
-    const el2 = $('#myTotalCiro');
-    if (el1) el1.textContent = jobs.length;
-    if (el2) el2.textContent = money(total);
+    const today = todayISO();
+    const todayJobs = jobs.filter((j) => j.date === today);
+
+    const totalCiro = jobs.reduce((a, j) => a + (j.amount || 0), 0);
+    const todayCiro = todayJobs.reduce((a, j) => a + (j.amount || 0), 0);
+
+    const calcShare = (list) => list.reduce((a, j) => {
+      if (Number.isInteger(j.masterShareKurus)) return a + (j.masterShareKurus / 100);
+      const rate = Number.isInteger(j.commissionRate) ? j.commissionRate : 50;
+      return a + ((j.amount || 0) * rate / 100);
+    }, 0);
+
+    const todayShare = calcShare(todayJobs);
+    const totalShare = calcShare(jobs);
+
+    const elTodayJobs = $('#myTodayJobs');
+    const elTodayShare = $('#myTodayShare');
+    const elTotalJobs = $('#myTotalJobs');
+    const elTotalCiro = $('#myTotalCiro');
+    const elTotalShare = $('#myTotalShare');
+
+    if (elTodayJobs) elTodayJobs.textContent = todayJobs.length;
+    if (elTodayShare) elTodayShare.textContent = money(todayShare);
+    if (elTotalJobs) elTotalJobs.textContent = jobs.length;
+    if (elTotalCiro) elTotalCiro.textContent = money(totalCiro);
+    if (elTotalShare) elTotalShare.textContent = money(totalShare);
   }
 
   window.BerberPanel = {
-    getJobs, saveJobs, getSvcs, getMasters,
+    getJobs, saveJobs, getSvcs, getMasters, saveMasters,
+    addMaster, removeMaster, syncUstaUsers,
+    renderMasters, renderSettings, renderFinance, renderJobs, renderStats, renderDoneList, renderSummary, renderAll,
     getClosedDays, saveClosedDays,
     money, toast, escapeHtml, todayISO, fmtDate, fmtDateLong,
     svcPrice, servicesOf, switchView, initials
@@ -1731,6 +1936,11 @@
     document.body.classList.add(`adm-role-${userRole}`);
 
     if (userRole === 'usta') {
+      ['ownerBottomNav', 'ownerMoreMenu', 'ownerMobileSnap'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+    }
       /* Sadece Yeni İşlem (pos) nav item'ı görünür; diğerleri gizli */
       $$('.adm-navitem').forEach((btn) => {
         if (btn.dataset.view !== 'pos') btn.style.display = 'none';
@@ -1763,7 +1973,7 @@
       /* Özette "Usta" satırını gizle — zaten otomatik atanır */
       /* renderSummary içinde usta satırını bastıralım */
 
-      /* Kendi Özetim kartı (toplam işlem + toplam ciro) */
+      /* Kendi Özetim kartı (Bugünkü işlem, bugünkü pay, toplam işlem, toplam pay) */
       const rightCol = document.querySelector('.adm-pos__col:last-child');
       if (rightCol && !$('#myStatsCard')) {
         const card = document.createElement('section');
@@ -1773,11 +1983,23 @@
           <header class="adm-card__head">
             <div>
               <h2>Kendi Özetim</h2>
-              <span class="adm-card__sub">Toplam işlem ve ciro (sizin)</span>
+              <span class="adm-card__sub">İşlem ve günlük hak ediş (pay) bilgileriniz</span>
             </div>
           </header>
           <div class="adm-card__body adm-card__body--col">
-            <div class="adm-kpis" style="grid-template-columns: 1fr 1fr;">
+            <div class="adm-kpis" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="adm-kpi">
+                <div class="adm-kpi__body">
+                  <span class="adm-kpi__label">Bugünkü İşlem</span>
+                  <strong class="adm-kpi__value" id="myTodayJobs">0</strong>
+                </div>
+              </div>
+              <div class="adm-kpi">
+                <div class="adm-kpi__body">
+                  <span class="adm-kpi__label" style="color:var(--gold);">Bugünkü Payım</span>
+                  <strong class="adm-kpi__value" id="myTodayShare" style="color:var(--gold);">0 ₺</strong>
+                </div>
+              </div>
               <div class="adm-kpi">
                 <div class="adm-kpi__body">
                   <span class="adm-kpi__label">Toplam İşlem</span>
@@ -1786,8 +2008,8 @@
               </div>
               <div class="adm-kpi">
                 <div class="adm-kpi__body">
-                  <span class="adm-kpi__label">Toplam Ciro</span>
-                  <strong class="adm-kpi__value" id="myTotalCiro">0 ₺</strong>
+                  <span class="adm-kpi__label">Toplam Hak Ediş</span>
+                  <strong class="adm-kpi__value" id="myTotalShare">0 ₺</strong>
                 </div>
               </div>
             </div>
@@ -1826,7 +2048,7 @@
   S.onChange((keys) => {
     if (!keys || !keys.length) return;
     renderStats();
-    if (currentView === 'pos') { renderDoneList(); renderDayStatus(); renderSummary(); }
+    if (currentView === 'pos') { renderMasters(); renderDoneList(); renderDayStatus(); renderSummary(); }
     if (currentView === 'history') renderJobs();
     if (currentView === 'finance') renderFinance();
     if (currentView === 'settings') renderSettings();

@@ -42,12 +42,11 @@
     list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
     /* Rozet: yaklaşan randevu sayısı */
-    const badge = $('#navApptCount');
-    if (badge) {
-      const pending = allAppts().filter((a) => a.status !== 'cancelled' && a.date >= todayISO()).length;
+    const pending = allAppts().filter((a) => a.status !== 'cancelled' && a.date >= todayISO()).length;
+    document.querySelectorAll('.js-badge-appt').forEach((badge) => {
       badge.textContent = pending;
       badge.style.display = pending ? '' : 'none';
-    }
+    });
 
     if (!list.length) {
       box.innerHTML = `<div class="adm-donelist__empty">

@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Yönetim Paneli — Beyaz Kuaför</title>
   <meta name="robots" content="noindex,nofollow" />
   <meta name="theme-color" content="#1b1d22" />
@@ -12,6 +12,18 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="admin.css" />
   <link rel="stylesheet" href="admin-pay.css" />
+  <link rel="stylesheet" href="admin-mobile.css" />
+  <style>
+    /* iPhone çentik (notch) ve alt uç (home indicator) güvenli alanı */
+    @supports (padding: env(safe-area-inset-top)) {
+      .adm-shell {
+        padding-top: env(safe-area-inset-top, 0);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        padding-left: env(safe-area-inset-left, 0);
+        padding-right: env(safe-area-inset-right, 0);
+      }
+    }
+  </style>
 </head>
 <body class="adm-body">
 
@@ -44,6 +56,8 @@
     <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7.6" cy="7.6" r="2.6"/><circle cx="16.4" cy="16.4" r="2.6"/></symbol>
     <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 4.2v15.6M7.2 19.8h9.6M4.2 8h15.6"/><path d="M4.2 8 1.8 13.4a2.8 2.8 0 0 0 4.8 0zM19.8 8l-2.4 5.4a2.8 2.8 0 0 0 4.8 0z"/></symbol>
     <symbol id="i-safe" viewBox="0 0 24 24"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="3.2"/><circle cx="12" cy="12" r="4.2"/><path d="M12 7.8V6.2M12 17.8v-1.6M16.2 12h1.6M6.2 12h1.6"/></symbol>
+
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></symbol>
   </defs>
 </svg>
 
@@ -68,12 +82,12 @@
       <button type="button" class="adm-navitem" data-view="appointments">
         <svg class="adm-navitem__icon"><use href="#i-cal"/></svg>
         <span>Randevular</span>
-        <span class="adm-navitem__badge" id="navApptCount">0</span>
+        <span class="adm-navitem__badge js-badge-appt" id="navApptCount">0</span>
       </button>
       <button type="button" class="adm-navitem" data-view="history">
         <svg class="adm-navitem__icon"><use href="#i-history"/></svg>
         <span>İş Geçmişi</span>
-        <span class="adm-navitem__badge" id="navJobCount">0</span>
+        <span class="adm-navitem__badge js-badge-jobs" id="navJobCount">0</span>
       </button>
       <button type="button" class="adm-navitem" data-view="finance">
         <svg class="adm-navitem__icon"><use href="#i-wallet"/></svg>
@@ -109,7 +123,7 @@
         <svg class="adm-navitem__icon"><use href="#i-cal"/></svg> Randevu Sayfası
       </a>
       <button type="button" class="adm-side__link adm-side__link--btn" id="sideLogout">
-        <svg class="adm-navitem__icon"><use href="#i-external"/></svg> Çıkış Yap
+        <img src="icons/user-logout.png" alt="Çıkış" class="adm-navitem__icon"> Çıkış Yap
       </button>
       <p class="adm-side__ver">Beyaz Kuaför · Yönetim Paneli v2.0</p>
     </div>
@@ -140,6 +154,29 @@
 
       <!-- ---------- YENİ İŞLEM ---------- -->
       <section class="adm-view is-active" data-view="pos">
+
+        <div class="adm-mobilesnap" id="ownerMobileSnap" aria-label="Günlük özet">
+          <div class="adm-mobilesnap__card">
+            <span>Günlük ciro</span>
+            <strong id="snapTodayCiro">0 ₺</strong>
+            <em id="snapJobsMeta">0 işlem</em>
+          </div>
+          <div class="adm-mobilesnap__card">
+            <span>Usta payları</span>
+            <strong id="snapMasterShare">0 ₺</strong>
+            <em>Bugünkü hak ediş</em>
+          </div>
+          <div class="adm-mobilesnap__card">
+            <span>Kasa — nakit</span>
+            <strong id="snapCash">0 ₺</strong>
+            <em id="snapCashMeta">Kart 0 ₺</em>
+          </div>
+          <div class="adm-mobilesnap__card">
+            <span>Kasa durumu</span>
+            <strong id="snapKasaState">Açık</strong>
+            <em id="snapKasaMeta">Gün henüz kapatılmadı</em>
+          </div>
+        </div>
 
         <div class="adm-pos">
 
@@ -653,7 +690,7 @@
             <p class="adm-label">Usta Ödemesi Kaydet</p>
             <div class="adm-addrow">
               <input type="date" id="paymentDate" aria-label="Ödeme tarihi" />
-              <input type="number" id="paymentAmount" placeholder="Tutar" min="0" step="0.01" />
+              <input type="number" id="paymentAmount" placeholder="Tutar" min="0" step="0.01" inputmode="decimal" />
               <input type="text" id="paymentNote" placeholder="Not (isteğe bağlı)" />
               <button type="button" class="adm-btn adm-btn--primary adm-btn--sm" id="addPaymentBtn">
                 <svg><use href="#i-check"/></svg> Ödemeyi Kaydet
@@ -789,7 +826,7 @@
             <div class="adm-card__body adm-card__body--row">
               <p>Usta, işlem tutarının bu oran kadar payını alır; kalan tutar dükkânın payıdır. Oran kaydedilen her işleme o anki değeriyle snapshot olarak yazılır.</p>
               <label class="adm-rate-input">
-                <input type="number" id="defaultRate" min="0" max="100" step="1" aria-label="Varsayılan pay oranı" />
+                <input type="number" id="defaultRate" min="0" max="100" step="1" inputmode="numeric" aria-label="Varsayılan pay oranı" />
                 <span>%</span>
               </label>
             </div>
@@ -819,7 +856,7 @@
               <div class="adm-addrow">
                 <select class="adm-select" id="srMaster" aria-label="Usta"></select>
                 <select class="adm-select" id="srService" aria-label="Hizmet"></select>
-                <input type="number" id="srRate" min="0" max="100" placeholder="%" style="width:92px;" aria-label="Oran" />
+                <input type="number" id="srRate" min="0" max="100" placeholder="%" style="width:92px;" inputmode="numeric" aria-label="Oran" />
                 <button type="button" class="adm-btn adm-btn--primary adm-btn--sm" id="addServiceRate">
                   <svg><use href="#i-plus"/></svg> Ekle
                 </button>
@@ -869,7 +906,7 @@
               <div id="svcList" class="adm-svclist"></div>
               <div class="adm-addrow">
                 <input type="text" id="newSvcName" placeholder="Hizmet adı" />
-                <input type="number" id="newSvcPrice" placeholder="Fiyat" min="0" />
+                <input type="number" id="newSvcPrice" placeholder="Fiyat" min="0" inputmode="decimal" />
                 <button type="button" class="adm-btn adm-btn--primary adm-btn--sm" id="addSvcBtn">
                   <svg><use href="#i-plus"/></svg> Ekle
                 </button>
@@ -893,6 +930,7 @@
                   <svg><use href="#i-plus"/></svg> Ekle
                 </button>
               </div>
+              <p class="adm-hint adm-hint--muted" style="margin-top:10px;font-size:12px;">"Kullanıcılar" bölümünden Usta rolüyle eklenen hesaplar bu listeye, Usta Hesapları'na ve Yeni İşlem ekranına otomatik senkronize edilir.</p>
             </div>
           </section>
         </div>
@@ -917,7 +955,7 @@
               </div>
               <div class="adm-field">
                 <label for="sitePhone">Telefon</label>
-                <input type="text" id="sitePhone" placeholder="0532 761 39 77" />
+                <input type="tel" id="sitePhone" placeholder="0532 761 39 77" inputmode="tel" />
               </div>
               <div class="adm-field">
                 <label for="siteAddress">Adres</label>
@@ -970,6 +1008,7 @@
                   <svg><use href="#i-plus"/></svg> Ekle
                 </button>
               </div>
+              <p class="adm-hint adm-hint--muted" style="margin-top:10px;font-size:12px;">💡 "Usta" rolü ile kullanıcı eklendiğinde usta hesapları, pay ayarları ve Yeni İşlem usta seçimi otomatik güncellenir.</p>
               <div class="adm-field" style="margin-top:18px;">
                 <label for="curPass">Mevcut Şifre</label>
                 <input type="password" id="curPass" placeholder="••••••" />
@@ -1001,6 +1040,85 @@
         </section>
       </section>
 
+    </div>
+  </div>
+
+  <nav class="adm-bottomnav" id="ownerBottomNav" aria-label="Yönetici mobil menü">
+    <button type="button" class="adm-tab is-active" data-view="pos">
+      <svg><use href="#i-receipt"/></svg>
+      <span>İşlem</span>
+    </button>
+    <button type="button" class="adm-tab" data-view="appointments">
+      <svg><use href="#i-cal"/></svg>
+      <span>Randevu</span>
+      <span class="adm-tab__badge js-badge-appt" style="display:none">0</span>
+    </button>
+    <button type="button" class="adm-tab" data-view="history">
+      <svg><use href="#i-history"/></svg>
+      <span>Geçmiş</span>
+      <span class="adm-tab__badge js-badge-jobs" style="display:none">0</span>
+    </button>
+    <button type="button" class="adm-tab" data-view="kasa">
+      <svg><use href="#i-safe"/></svg>
+      <span>Kasa</span>
+    </button>
+    <button type="button" class="adm-tab" data-view="more" aria-controls="ownerMoreMenu">
+      <svg><use href="#i-grid"/></svg>
+      <span>Menü</span>
+    </button>
+  </nav>
+
+  <div class="adm-more" id="ownerMoreMenu" hidden>
+    <div class="adm-more__panel" role="dialog" aria-labelledby="ownerMoreTitle">
+      <div class="adm-more__head">
+        <h2 id="ownerMoreTitle">Tüm bölümler</h2>
+        <button type="button" class="adm-iconbtn" id="ownerMoreClose" aria-label="Kapat"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <div class="adm-more__grid">
+        <button type="button" class="adm-more__item" data-view="finance">
+          <svg><use href="#i-wallet"/></svg>
+          Mali İşlemler
+        </button>
+        <button type="button" class="adm-more__item" data-view="masters">
+          <svg><use href="#i-scale"/></svg>
+          Usta Hesapları
+        </button>
+        <button type="button" class="adm-more__item" data-view="pay">
+          <svg><use href="#i-percent"/></svg>
+          Pay Ayarları
+        </button>
+        <button type="button" class="adm-more__item" data-view="settings">
+          <svg><use href="#i-sliders"/></svg>
+          Ayarlar
+        </button>
+        <button type="button" class="adm-more__item" data-view="pos">
+          <svg><use href="#i-receipt"/></svg>
+          Yeni İşlem
+        </button>
+        <button type="button" class="adm-more__item" data-view="appointments">
+          <svg><use href="#i-cal"/></svg>
+          Randevular
+        </button>
+        <button type="button" class="adm-more__item" data-view="history">
+          <svg><use href="#i-history"/></svg>
+          İş Geçmişi
+        </button>
+        <button type="button" class="adm-more__item" data-view="kasa">
+          <svg><use href="#i-safe"/></svg>
+          Kasa
+        </button>
+      </div>
+      <div class="adm-more__links">
+        <a class="adm-more__link" href="index.html">
+          <svg><use href="#i-external"/></svg> Siteyi Aç
+        </a>
+        <a class="adm-more__link" href="randevu.html">
+          <svg><use href="#i-cal"/></svg> Randevu Sayfası
+        </a>
+        <button type="button" class="adm-more__link adm-more__link--danger" id="ownerMoreLogout">
+          <img src="icons/user-logout.png" alt="Çıkış" class="adm-more__icon"> Çıkış Yap
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1076,7 +1194,7 @@
       </div>
       <div class="adm-field">
         <label for="qsPrice">Fiyat (₺)</label>
-        <input type="number" id="qsPrice" min="0" placeholder="0" />
+        <input type="number" id="qsPrice" min="0" placeholder="0" inputmode="decimal" />
       </div>
       <div class="adm-modalfoot">
         <button type="button" class="adm-btn adm-btn--ghost" data-close="addSvcModal">Vazgeç</button>
